@@ -74,6 +74,7 @@ class NowPlayingCard extends LitElement {
       show_progress: true,
       show_timestamps: true,
       show_summary: false,
+      stale_after: 120,
       ...config,
     };
   }
@@ -137,6 +138,19 @@ class NowPlayingCard extends LitElement {
     return `${m}:${String(sec).padStart(2, "0")}`;
   }
 
+  _isStale(stateObj) {
+    // A "playing" entity is stale if its position hasn't been updated recently.
+    // Paused entities are never stale (position doesn't advance when paused).
+    // Entities without position tracking (e.g. some Alexa states) are never stale.
+    if (stateObj.state !== "playing") return false;
+    const staleAfter = this.config.stale_after;
+    if (!staleAfter || staleAfter <= 0) return false;
+    const updatedAt = stateObj.attributes.media_position_updated_at;
+    if (!updatedAt) return false;
+    const elapsed = (Date.now() - new Date(updatedAt).getTime()) / 1000;
+    return elapsed > staleAfter;
+  }
+
   _getActivePlayer() {
     if (!this.hass) return null;
 
@@ -155,7 +169,8 @@ class NowPlayingCard extends LitElement {
         const candidates = Object.keys(this.hass.states)
           .filter((eid) => pattern.test(eid))
           .map((eid) => this.hass.states[eid])
-          .filter((s) => ACTIVE_STATES.indexOf(s.state) !== -1);
+          .filter((s) => ACTIVE_STATES.indexOf(s.state) !== -1)
+          .filter((s) => !this._isStale(s));
 
         if (candidates.length > 0) {
           // If multiple matches, prefer the most recently updated
@@ -172,7 +187,11 @@ class NowPlayingCard extends LitElement {
         }
       } else {
         const stateObj = this.hass.states[entityId];
-        if (stateObj && ACTIVE_STATES.indexOf(stateObj.state) !== -1) {
+        if (
+          stateObj &&
+          ACTIVE_STATES.indexOf(stateObj.state) !== -1 &&
+          !this._isStale(stateObj)
+        ) {
           return { state: stateObj, label: label, isWildcard: false };
         }
       }
