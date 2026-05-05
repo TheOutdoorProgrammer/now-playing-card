@@ -38,8 +38,8 @@ class NowPlayingCard extends LitElement {
     this.config = {
       background_opacity: 0.5,
       card_height: 300,
-      idle_text: "",
-      show_when_idle: false,
+      idle_text: "Nothing playing",
+      show_idle: true,
       show_progress: true,
       show_timestamps: true,
       show_summary: false,
@@ -134,16 +134,24 @@ class NowPlayingCard extends LitElement {
     const result = this._getActivePlayer();
 
     if (!result) {
-      if (this.config.show_when_idle && this.config.idle_text) {
-        return html`
-          <ha-card>
-            <div class="idle">
-              <span class="idle-text">${this.config.idle_text}</span>
+      if (!this.config.show_idle) return html``;
+      const height = this.config.card_height;
+      return html`
+        <ha-card>
+          <div class="container" style="height: ${height}px;">
+            <div class="artwork-placeholder"></div>
+            <div class="idle-content">
+              <div class="idle-icon">
+                <svg viewBox="0 0 24 24" width="48" height="48">
+                  <path fill="rgba(255,255,255,0.15)" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55C7.79 13 6 14.79 6 17s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                </svg>
+              </div>
+              <div class="idle-text">${this.config.idle_text || "Nothing playing"}</div>
+              <div class="idle-subtext">Media will appear here when something starts</div>
             </div>
-          </ha-card>
-        `;
-      }
-      return html``;
+          </div>
+        </ha-card>
+      `;
     }
 
     const stateObj = result.state;
@@ -456,13 +464,28 @@ class NowPlayingCard extends LitElement {
       }
 
       /* Idle */
-      .idle {
+      .idle-content {
+        position: relative;
+        z-index: 2;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 16px;
-        color: var(--secondary-text-color);
-        font-size: 0.9em;
+        height: 100%;
+        gap: 8px;
+      }
+      .idle-icon {
+        opacity: 0.6;
+      }
+      .idle-text {
+        font-size: 1.1em;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.4);
+        letter-spacing: 0.02em;
+      }
+      .idle-subtext {
+        font-size: 0.75em;
+        color: rgba(255, 255, 255, 0.2);
       }
     `;
   }
