@@ -795,7 +795,9 @@ class NowPlayingCard extends LitElement {
   }
 }
 
-customElements.define("now-playing-card", NowPlayingCard);
+if (!customElements.get("now-playing-card")) {
+  customElements.define("now-playing-card", NowPlayingCard);
+}
 
 window.customCards = window.customCards || [];
 window.customCards.push({
