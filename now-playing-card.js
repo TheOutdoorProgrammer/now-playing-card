@@ -115,7 +115,7 @@ class NowPlayingCard extends LitElement {
             (s) => s.state === "playing" || s.state === "paused"
           );
         if (matches.length > 0) {
-          return { state: matches[0], label };
+          return { state: matches[0], label, isWildcard: true };
         }
       } else {
         const stateObj = this.hass.states[entityId];
@@ -123,7 +123,7 @@ class NowPlayingCard extends LitElement {
           stateObj &&
           (stateObj.state === "playing" || stateObj.state === "paused")
         ) {
-          return { state: stateObj, label };
+          return { state: stateObj, label, isWildcard: false };
         }
       }
     }
@@ -158,9 +158,22 @@ class NowPlayingCard extends LitElement {
     const summary = attrs.media_summary || "";
     const username = attrs.username || "";
     const playerState = stateObj.state;
-    const friendlyName = result.label || attrs.friendly_name || "";
     const height = this.config.card_height;
     const opacity = this.config.background_opacity;
+
+    // Device/source name logic
+    // For match_app entries (e.g. Plex), extract device from friendly_name parenthetical
+    // For regular entries, the label IS the device
+    const rawFriendlyName = attrs.friendly_name || "";
+    let sourceName = result.label || rawFriendlyName;
+    let deviceName = "";
+    if (result.isWildcard && rawFriendlyName) {
+      // Extract device info from parenthetical, e.g. "Plex (Plex Web - Chrome - OSX)"
+      const parenMatch = rawFriendlyName.match(/\(([^)]+)\)/);
+      if (parenMatch) {
+        deviceName = parenMatch[1];
+      }
+    }
 
     // Progress calculation
     const duration = attrs.media_duration || 0;
@@ -210,8 +223,11 @@ class NowPlayingCard extends LitElement {
                   </div>`
                 : ""}
               <div class="info">
-                <span class="source">${friendlyName}</span>
-                ${app && !stateObj.entity_id.startsWith("media_player.plex_")
+                <span class="source">${sourceName}</span>
+                ${deviceName
+                  ? html`<span class="separator">·</span><span class="device">${deviceName}</span>`
+                  : ""}
+                ${app && !result.isWildcard
                   ? html`<span class="separator">·</span><span class="app">${app}</span>`
                   : ""}
                 ${username
